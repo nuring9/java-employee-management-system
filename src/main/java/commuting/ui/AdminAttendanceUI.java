@@ -7,6 +7,6 @@ public class AdminAttendanceUI {
         a = 100;
         int c= a+b;
         System.out.println(a+b+c);
-
+asdsad
     }
 }
