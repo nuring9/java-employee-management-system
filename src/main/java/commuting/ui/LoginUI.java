@@ -14,7 +14,7 @@ public class LoginUI extends JFrame {
 
     public LoginUI() {
         setTitle("출퇴근 관리 시스템 - 로그인");
-        setSize(300, 180);
+        setSize(360, 240);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -23,18 +23,26 @@ public class LoginUI extends JFrame {
     }
 
     private void initUI() {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+        // 프레임 전체 여백
+        ((JComponent) getContentPane())
+                .setBorder(BorderFactory.createEmptyBorder(25, 35, 25, 35));
+
+        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 12));
+        // rows, cols, 가로간격, 세로간격
 
         panel.add(new JLabel("아이디"));
         txtUserId = new JTextField();
+        txtUserId.setPreferredSize(new Dimension(200, 26));
         panel.add(txtUserId);
 
         panel.add(new JLabel("비밀번호"));
         txtPassword = new JPasswordField();
+        txtPassword.setPreferredSize(new Dimension(200, 26));
         panel.add(txtPassword);
 
+        panel.add(new JLabel()); // 빈 칸
         JButton btnLogin = new JButton("로그인");
-        panel.add(new JLabel());
+        btnLogin.setPreferredSize(new Dimension(200, 30));
         panel.add(btnLogin);
 
         add(panel, BorderLayout.CENTER);

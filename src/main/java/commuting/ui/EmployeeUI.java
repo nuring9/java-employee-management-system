@@ -18,7 +18,8 @@ public class EmployeeUI extends JFrame {
         this.loginUser = user;
 
         setTitle("직원 화면 _ " + user.getName());
-        setSize(500, 400);
+        setSize(520, 420);
+        setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         initUI();
@@ -26,21 +27,37 @@ public class EmployeeUI extends JFrame {
     }
 
     private void initUI() {
+        // 프레임 전체 여백
+        ((JComponent) getContentPane())
+                .setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+
+        // 상단 환영 문구
         JLabel lblWelcome = new JLabel(
                 loginUser.getName() + "님, 근무 관리 화면입니다.",
                 SwingConstants.CENTER
         );
+        lblWelcome.setFont(new Font("맑은 고딕", Font.BOLD, 14));
+        lblWelcome.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
         add(lblWelcome, BorderLayout.NORTH);
 
+       // 중앙 텍스트 영역
         textArea = new JTextArea();
         textArea.setEnabled(false);
-        add(new JScrollPane(textArea), BorderLayout.CENTER);
+        textArea.setFont(new Font("맑은 고딕", Font.PLAIN, 13));
+        textArea.setMargin(new Insets(10, 10, 10, 10));
 
-        JPanel btnPanel = new JPanel();
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        add(scrollPane, BorderLayout.CENTER);
 
+        // 하단 버튼 영역
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
         JButton btnCheckIn = new JButton("출근");
         JButton btnCheckOut = new JButton("퇴근");
         JButton btnMyLog = new JButton("내 출근 기록");
+
+        btnCheckIn.setPreferredSize(new Dimension(100, 32));
+        btnCheckOut.setPreferredSize(new Dimension(100, 32));
+        btnMyLog.setPreferredSize(new Dimension(120, 32));
 
         btnPanel.add(btnCheckIn);
         btnPanel.add(btnCheckOut);
