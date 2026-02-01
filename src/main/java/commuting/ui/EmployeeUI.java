@@ -6,23 +6,31 @@ import commuting.service.EmployeeService;
 
 import javax.swing.*;
 import java.awt.*;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class EmployeeUI extends JFrame {
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private User loginUser;
     private EmployeeService employeeService = new EmployeeService();
-
     private JTextArea textArea;
+
+    // 하단
+    private JLabel lblStatus;
+    private JLabel lblWorkTime;
+
 
     public EmployeeUI(User user) {
         this.loginUser = user;
 
         setTitle("직원 화면 _ " + user.getName());
-        setSize(520, 420);
+        setSize(640, 420);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         initUI();
+        updateTodayStatus(); // 초기 상태 갱신
         setVisible(true);
     }
 
@@ -53,21 +61,43 @@ public class EmployeeUI extends JFrame {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
         JButton btnCheckIn = new JButton("출근");
         JButton btnCheckOut = new JButton("퇴근");
-        JButton btnMyLog = new JButton("내 출근 기록");
+        JButton btnMyLog = new JButton("전체 출근 조회");
+        JButton btnDateLog = new JButton("날짜별 조회");
 
         btnCheckIn.setPreferredSize(new Dimension(100, 32));
         btnCheckOut.setPreferredSize(new Dimension(100, 32));
         btnMyLog.setPreferredSize(new Dimension(120, 32));
+        btnDateLog.setPreferredSize(new Dimension(150, 32));
+
 
         btnPanel.add(btnCheckIn);
         btnPanel.add(btnCheckOut);
         btnPanel.add(btnMyLog);
-
-        add(btnPanel, BorderLayout.SOUTH);
+        btnPanel.add(btnDateLog);
 
         btnCheckIn.addActionListener(e -> checkIn());
         btnCheckOut.addActionListener(e -> checkOut());
-        btnMyLog.addActionListener(e -> loadMyAttendance());
+        btnMyLog.addActionListener(e -> loadMyAttendance());          // 전체 이력
+        btnDateLog.addActionListener(e -> loadMyAttendanceByDate()); // 날짜별
+
+
+        // 하단 상태 패널
+        lblStatus = new JLabel("오늘 상태: 미출근");
+        lblWorkTime = new JLabel("오늘 근무시간: 0시간 0분");
+
+        lblStatus.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        lblWorkTime.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 5));
+        statusPanel.add(lblStatus);
+        statusPanel.add(lblWorkTime);
+
+// 하단 전체 패널
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(btnPanel, BorderLayout.NORTH);
+        bottomPanel.add(statusPanel, BorderLayout.SOUTH);
+
+        add(bottomPanel, BorderLayout.SOUTH);
     }
 
     private void checkIn() {
@@ -75,6 +105,7 @@ public class EmployeeUI extends JFrame {
 
         if (result) {
             JOptionPane.showMessageDialog(this, "출근 처리되었습니다.");
+            updateTodayStatus();
         } else {
             JOptionPane.showMessageDialog(this, "이미 오늘 출근 처리되었습니다.");
         }
@@ -85,20 +116,109 @@ public class EmployeeUI extends JFrame {
 
         if (result) {
             JOptionPane.showMessageDialog(this, "퇴근 처리되었습니다.");
+            updateTodayStatus();
         } else {
             JOptionPane.showMessageDialog(this, "퇴근할 수 없습니다. (출근 후 10분 미경과 또는 미출근)");
         }
     }
 
+
+    private void loadMyAttendanceByDate() {
+
+        // 날짜 선택 Spinner
+        SpinnerDateModel model =
+                new SpinnerDateModel(new java.util.Date(), null, null, java.util.Calendar.DAY_OF_MONTH);
+        JSpinner dateSpinner = new JSpinner(model);
+        dateSpinner.setEditor(new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd"));
+
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                dateSpinner,
+                "조회할 날짜 선택",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result != JOptionPane.OK_OPTION) return;
+
+        java.util.Date selected = (java.util.Date) dateSpinner.getValue();
+        java.time.LocalDate date = selected.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate();
+
+        List<Attendance> list =
+                employeeService.getMyAttendance(loginUser);
+
+        textArea.setText("");
+
+        boolean found = false;
+
+        for (Attendance a : list) {
+            if (a.getWork_date().equals(date)) {
+                found = true;
+
+                String inTime = a.getCheck_in() == null ? "-" : a.getCheck_in().format(TIME_FMT);
+                String outTime = a.getCheck_out() == null ? "-" : a.getCheck_out().format(TIME_FMT);
+
+                textArea.append(
+                        a.getWork_date()
+                                + " | 출근: " + inTime
+                                + " | 퇴근: " + outTime
+                                + "\n"
+                );
+            }
+        }
+
+        if (!found) {
+            textArea.setText(date + " 출근 기록이 없습니다.");
+        }
+    }
+
+
+    private void updateTodayStatus() {
+        Attendance today = employeeService.getTodayAttendance(loginUser);
+
+        if (today == null) {
+            lblStatus.setText("오늘 상태: 미출근");
+            lblWorkTime.setText("오늘 근무시간: 0시간 0분");
+            return;
+        }
+
+        if (today.getCheck_out() == null) {
+            lblStatus.setText("오늘 상태: 근무중");
+        } else {
+            lblStatus.setText("오늘 상태: 퇴근완료");
+        }
+
+        long minutes = employeeService.getTodayWorkMinutes(loginUser);
+        long hours = minutes / 60;
+        long mins = minutes % 60;
+
+        lblWorkTime.setText("오늘 근무시간: " + hours + "시간 " + mins + "분");
+    }
+
+
     private void loadMyAttendance() {
         List<Attendance> list = employeeService.getMyAttendance(loginUser);
 
-        textArea.setText(""); // 초기화
+        textArea.setText("");
 
         for (Attendance a : list) {
+            String inTime = (a.getCheck_in() == null)
+                    ? "-"
+                    : a.getCheck_in().format(TIME_FMT);
+
+            String outTime = (a.getCheck_out() == null)
+                    ? "-"
+                    : a.getCheck_out().format(TIME_FMT);
+
             textArea.append(
-                    a.getWork_date() + " | 출근: " + a.getCheck_in() + " | 퇴근: " + a.getCheck_out() + "\n"
+                    a.getWork_date()
+                            + " | 출근: " + inTime
+                            + " | 퇴근: " + outTime
+                            + "\n"
             );
         }
     }
+
 }

@@ -3,7 +3,8 @@ package commuting;
 import commuting.ui.LoginUI;
 
 public class Main {
-    static void main() {
+    public static void main(String[] args){
         new LoginUI();
     }
 }
+

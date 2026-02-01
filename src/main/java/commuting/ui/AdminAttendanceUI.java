@@ -16,17 +16,28 @@ public class AdminAttendanceUI extends JFrame {
     private DefaultTableModel tableModel;
     private JTable table;
 
-    private JLabel lblCheckIn;
-    private JLabel lblAbsent;
+
+//  상단 조회 상태 표시용
+    private JLabel lblStatus;
+
+
+    // 하단 대시보드
+    private JLabel lblSummaryCheckIn;
+    private JLabel lblSummaryAbsent;
+    private JLabel lblSummaryCheckOut;
+
+    // 날짜
+    private JSpinner dateSpinner;
 
     public AdminAttendanceUI(User admin) {
         setTitle("관리자 출퇴근 관리");
-        setSize(920, 420);
+        setSize(920, 460);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         initUI();
-        loadToday();
+        loadAll();
+        updateDashboard(); // 하단 요약은 오늘 기준
 
         setVisible(true);
     }
@@ -37,24 +48,42 @@ public class AdminAttendanceUI extends JFrame {
         ((JComponent) getContentPane())
                 .setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
 
-        // 상단
-        lblCheckIn = new JLabel("출근자: 0명");
-        lblAbsent = new JLabel("미출근자: 0명");
+
+        lblStatus = new JLabel("전체 이력 조회 중");
+
+        JButton allBtn = new JButton("전체 조회");
+        allBtn.addActionListener(e -> loadAll());
 
         JButton todayBtn = new JButton("오늘 조회");
-        todayBtn.addActionListener(e -> loadToday());
+        todayBtn.addActionListener(e -> {
+            dateSpinner.setValue(new java.util.Date());  // 날짜선택기가 오늘 날짜로 초기화
+            loadToday();});
+
+        // 날짜 선택 Spinner
+       SpinnerDateModel dateModel = new SpinnerDateModel(new java.util.Date(), null, null, java.util.Calendar.DAY_OF_MONTH);
+       dateSpinner = new JSpinner(dateModel);
+        JSpinner.DateEditor editor =
+                new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
+        dateSpinner.setEditor(editor);
+        dateSpinner.setPreferredSize(new Dimension(110, 30));
+
+        // 날짜 조회 버튼
+        JButton dateBtn = new JButton("날짜 조회");
+        dateBtn.addActionListener(e -> loadByDate());
 
         JButton forceOutBtn = new JButton("강제 퇴근");
         forceOutBtn.addActionListener(e -> forceCheckOut());
 
+        allBtn.setPreferredSize(new Dimension(90, 30));
         todayBtn.setPreferredSize(new Dimension(90, 30));
         forceOutBtn.setPreferredSize(new Dimension(100, 30));
 
 
         JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 6));
+        top.add(allBtn);
         top.add(todayBtn);
-        top.add(lblCheckIn);
-        top.add(lblAbsent);
+        top.add(dateSpinner);   // 날짜 선택
+        top.add(dateBtn);       // 날짜 조회
         top.add(forceOutBtn);
 
         add(top, BorderLayout.NORTH);
@@ -73,8 +102,51 @@ public class AdminAttendanceUI extends JFrame {
         table.getTableHeader().setFont(new Font("맑은 고딕", Font.BOLD, 13));
 
         add(new JScrollPane(table), BorderLayout.CENTER);
+
+
+        // 하단 대시보드 요약
+        Font dashFont = UIManager.getFont("Label.font");
+
+        lblSummaryCheckIn  = new JLabel("출근자: 0명", SwingConstants.CENTER);
+        lblSummaryAbsent  = new JLabel("미출근자: 0명", SwingConstants.CENTER);
+        lblSummaryCheckOut = new JLabel("퇴근자: 0명", SwingConstants.CENTER);
+
+        lblSummaryCheckIn.setFont(dashFont);
+        lblSummaryAbsent.setFont(dashFont);
+        lblSummaryCheckOut.setFont(dashFont);
+
+        //GridLayout
+        JPanel bottom = new JPanel(new GridLayout(1, 3, 20, 0));
+        bottom.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+
+        bottom.add(lblSummaryCheckIn);
+        bottom.add(lblSummaryAbsent);
+        bottom.add(lblSummaryCheckOut);
+
+        add(bottom, BorderLayout.SOUTH);
     }
 
+    // 전체(과거포함) 조회
+    private void loadAll() {
+        tableModel.setRowCount(0);
+
+        List<Attendance> list = service.getAllAttendance();
+
+        for(Attendance a : list){
+            tableModel.addRow(new Object[]{
+                    a.getUser_id(),
+                    a.getName(),
+                    a.getDepartment(),
+                    a.getWork_date(),
+                    a.getCheck_in(),
+                    a.getCheck_out(),
+                    a.getWork_status()
+            });
+        }
+        lblStatus.setText("전체 이력 조회 중");
+    }
+
+    // 오늘 조회
     private void loadToday() {
         tableModel.setRowCount(0);
 
@@ -93,12 +165,56 @@ public class AdminAttendanceUI extends JFrame {
             });
         }
         // 대시보드 요약
-        AdminAttendanceService.AdminDashboard dash = service.getTodayDashboard();
-
-        lblCheckIn.setText("출근자: " + dash.getCheckInCount() + "명");
-        lblAbsent.setText("미출근자: " + dash.getAbsentCount() + "명");
+        lblStatus.setText("오늘 출퇴근 현황");
+        updateDashboard(); // 오늘 기준 요약 갱신
     }
 
+
+    // 날짜 조회
+    private void loadByDate() {
+        tableModel.setRowCount(0);
+
+        java.util.Date selected =
+                (java.util.Date) dateSpinner.getValue();
+
+        LocalDate date = selected.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate();
+
+        List<Attendance> list =
+                service.getAttendanceByDate(date);
+
+        for (Attendance a : list) {
+            tableModel.addRow(new Object[]{
+                    a.getUser_id(),
+                    a.getName(),
+                    a.getDepartment(),
+                    a.getWork_date(),
+                    a.getCheck_in(),
+                    a.getCheck_out(),
+                    a.getWork_status()
+            });
+        }
+        lblStatus.setText(date + " 조회 결과");
+    }
+
+
+    // 하단 대시보드 갱신 (오늘 기준)
+    private void updateDashboard() {
+        AdminAttendanceService.AdminDashboard dash = service.getTodayDashboard();
+
+        lblSummaryCheckIn.setText("출근자: " + dash.getCheckInCount() + "명");
+        lblSummaryAbsent.setText("미출근자: " + dash.getAbsentCount() + "명");
+        lblSummaryCheckOut.setText("퇴근자: " + dash.getCheckOutCount() + "명");
+
+        System.out.println("대시보드 값 → "
+                + dash.getCheckInCount() + ", "
+                + dash.getAbsentCount() + ", "
+                + dash.getCheckOutCount());
+    }
+
+
+    // 관리자 강제 퇴근
     private void forceCheckOut() {
         int row = table.getSelectedRow();
         if (row == -1) {

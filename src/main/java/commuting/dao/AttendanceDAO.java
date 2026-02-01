@@ -46,7 +46,7 @@ public class AttendanceDAO {
     }
 
 
-    // 내 출퇴근 기록 조회 (SELECT)
+    // 내 출퇴근 기록 조회 (SELECT) user가 접속 시
     public List<Attendance> selectMyAttendance(String user_id) {
         List<Attendance> list = new ArrayList<>();
         String sql = "SELECT * FROM attendance WHERE user_id = ? ORDER BY work_date DESC";
@@ -87,6 +87,50 @@ public class AttendanceDAO {
 
 
     // 이제부터 관리자 기능 추가
+
+    // 과거 포함 전체 출퇴근 이력 조회
+    public List<Attendance> findAll() {
+        List<Attendance> list = new ArrayList<>();
+
+        String sql =
+                "SELECT a.user_id, u.name, u.department, a.work_date, a.check_in, a.check_out " +
+                        "FROM attendance a " +
+                        "JOIN user u ON a.user_id = u.user_id " +
+                        "ORDER BY a.work_date DESC, u.department, u.name";
+
+        try (
+                Connection conn = DBUtil.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()
+        ) {
+            while (rs.next()) {
+                Attendance a = new Attendance();
+                a.setUser_id(rs.getString("user_id"));
+                a.setName(rs.getString("name"));
+                a.setDepartment(rs.getString("department"));
+                a.setWork_date(rs.getDate("work_date").toLocalDate());
+
+                if (rs.getTime("check_in") != null) {
+                    a.setCheck_in(LocalDateTime.of(
+                            a.getWork_date(),
+                            rs.getTime("check_in").toLocalTime()
+                    ));
+                }
+
+                if (rs.getTime("check_out") != null) {
+                    a.setCheck_out(LocalDateTime.of(
+                            a.getWork_date(),
+                            rs.getTime("check_out").toLocalTime()
+                    ));
+                }
+
+                list.add(a);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 
     // 날짜별 전체 출퇴근 조회
     public List<Attendance> findAllByDate(LocalDate date) {
@@ -148,12 +192,13 @@ public class AttendanceDAO {
     // 오늘 미출근자 수
     public int countTodayAbsent() {
         String sql =
-                "SELECT COUNT(*) FROM user u " +
+                "SELECT COUNT(*) " +
+                        "FROM user u " +
+                        "LEFT JOIN attendance a " +
+                        "  ON u.user_id = a.user_id " +
+                        " AND a.work_date = CURDATE() " +
                         "WHERE u.role = 'EMPLOYEE' " +
-                        "AND NOT EXISTS ( " +
-                        "   SELECT 1 FROM attendance a " +
-                        "   WHERE a.user_id = u.user_id AND a.work_date = CURDATE()" +
-                        ")";
+                        "AND a.check_in IS NULL";
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -166,6 +211,28 @@ public class AttendanceDAO {
         }
         return 0;
     }
+
+    // 오늘 퇴근자 수
+    public int countTodayCheckOut() {
+        String sql =
+                "SELECT COUNT(*) " +
+                        "FROM attendance " +
+                        "WHERE work_date = CURDATE() " +
+                        "AND check_out IS NOT NULL";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            if (rs.next()) return rs.getInt(1);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+
 
     // 관리자 강제 퇴근 처리
     public boolean updateCheckOut(String user_id, LocalDate date) {

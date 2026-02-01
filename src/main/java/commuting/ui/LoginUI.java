@@ -3,9 +3,10 @@ package commuting.ui;
 import commuting.dto.User;
 import commuting.service.LoginService;
 
+
 import javax.swing.*;
 import java.awt.*;
-import java.util.Scanner;
+
 
 public class LoginUI extends JFrame {
     private JTextField txtUserId;
@@ -42,7 +43,7 @@ public class LoginUI extends JFrame {
 
         panel.add(new JLabel()); // 빈 칸
         JButton btnLogin = new JButton("로그인");
-        btnLogin.setPreferredSize(new Dimension(200, 30));
+        btnLogin.setPreferredSize(new Dimension(200, 28));
         panel.add(btnLogin);
 
         add(panel, BorderLayout.CENTER);
@@ -66,7 +67,7 @@ public class LoginUI extends JFrame {
             JOptionPane.showMessageDialog(
                     this, user.getName() + "님 환영합니다.", "로그인 성공", JOptionPane.INFORMATION_MESSAGE
             );
-            dispose(); // 로그인 창 닫기
+            dispose(); // 로그인 창 닫기.
 
             if("EMPLOYEE".equals(user.getRole())){
                 new EmployeeUI(user);

@@ -55,25 +55,33 @@ public class AdminUserUI extends JFrame {
         JButton btnAdd = new JButton("추가");
         JButton btnUpdate = new JButton("수정");
         JButton btnDelete = new JButton("삭제");
+        JButton btnAttendance = new JButton("출퇴근 관리");
         JButton btnRefresh = new JButton("새로고침");
 
         Dimension btnSize = new Dimension(90, 32);
         btnAdd.setPreferredSize(btnSize);
         btnUpdate.setPreferredSize(btnSize);
         btnDelete.setPreferredSize(btnSize);
+        btnAttendance.setPreferredSize(btnSize);
         btnRefresh.setPreferredSize(btnSize);
+
 
         btnPanel.add(btnAdd);
         btnPanel.add(btnUpdate);
         btnPanel.add(btnDelete);
+        btnPanel.add(btnAttendance);
         btnPanel.add(btnRefresh);
 
         add(btnPanel, BorderLayout.SOUTH);
+
 
         // 이벤트
         btnRefresh.addActionListener(e -> loadUsers());
         btnDelete.addActionListener(e -> deleteSelectedUser());
         btnAdd.addActionListener(e -> openAddUserDialog());
+        btnAttendance.addActionListener(e -> {
+            new AdminAttendanceUI(loginUser); // loginUser = 관리자
+        });
         btnUpdate.addActionListener(e -> openUpdateUserDialog());
     }
 
@@ -128,6 +136,7 @@ public class AdminUserUI extends JFrame {
 
     }
 
+    // 수정
     public void openUpdateUserDialog() {
         int row = table.getSelectedRow();
         if (row == -1) {

@@ -30,34 +30,68 @@ public class EmployeeService {
     }
 
     // 퇴근
-    public boolean checkOut(User user){
+    public boolean checkOut(User user) {
         List<Attendance> list = attendanceDAO.selectMyAttendance(user.getUser_id());
-        // 조회 먼저
-        LocalDate today = LocalDate.now(); // 오늘 날짜
+        LocalDate today = LocalDate.now();
 
-        for(Attendance a : list){
-            if(a.getWork_date().equals(today)){
+        for (Attendance a : list) {
+            if (a.getWork_date().equals(today)) {
                 // 오늘 날짜랑 일치하면
-                if(a.getCheck_out() == null){
+
+                // 이미 퇴근한 경우
+                if (a.getCheck_out() != null) {
                     // 체크아웃이 안되어있는 경우(아직 퇴근 안 한 상태인지 확인)
-                    LocalDateTime checkInTime = a.getCheck_in();
-                    // 오늘 출근한 시간 가져오기
-                    LocalDateTime now = LocalDateTime.now();
-                    // 현재 시간 (자바 기준, DB랑 날짜시간 쓰는방법이 다름)
-
-                    if(Duration.between(checkInTime, now).toMillis() < 10){
-                        return false;
-                        // Duration.between(); = 두 사이의 시간의 경과시간 계산 해줌.
-                    }
-                    attendanceDAO.updateCheckOut(user.getUser_id());
-                    return true;
-
+                    return false;
                 }
 
+                // 아직 퇴근 안 한 경우
+                LocalDateTime checkInTime = a.getCheck_in();
+                // 오늘 출근한 시간 가져오기
+                LocalDateTime now = LocalDateTime.now();
+                // 현재 시간 (자바 기준, DB랑 날짜시간 쓰는방법이 다름)
+
+                if (Duration.between(checkInTime, now).toMinutes() < 10) {
+                    // Duration.between(); = 두 사이의 시간의 경과시간 계산 해줌.
+                    return false;
+                }
+
+                attendanceDAO.updateCheckOut(user.getUser_id());
+                return true;
             }
         }
-        return true;
+
+        // 오늘 출근 기록 자체가 없는 경우
+        return false;
     }
+
+    // 오늘 근무 상태 조회
+    public Attendance getTodayAttendance(User user) {
+        List<Attendance> list = attendanceDAO.selectMyAttendance(user.getUser_id());
+        LocalDate today = LocalDate.now();
+
+        for (Attendance a : list) {
+            if (a.getWork_date().equals(today)) {
+                return a;
+            }
+        }
+        return null; // 오늘 출근 기록 없음
+    }
+
+    // 오늘 근무 시간 계산 (분 단위)
+    public long getTodayWorkMinutes(User user) {
+        Attendance today = getTodayAttendance(user);
+        if (today == null || today.getCheck_in() == null) {
+            return 0;
+        }
+
+        LocalDateTime end =
+                (today.getCheck_out() != null)
+                        ? today.getCheck_out()
+                        : LocalDateTime.now();
+
+        return Duration.between(today.getCheck_in(), end).toMinutes();
+    }
+
 
     // 출퇴근 기록 조회
     public List<Attendance> getMyAttendance(User user){
