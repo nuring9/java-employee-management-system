@@ -118,17 +118,36 @@ public class EmployeeUI extends JFrame {
         }
     }
 
+    // 퇴근
     private void checkOut() {
-        boolean result = employeeService.checkOut(loginUser);
+
+        Attendance today =
+                employeeService.getTodayAttendance(loginUser);
+
+        // 출근 안함
+        if (today == null || today.getCheck_in() == null) {
+            JOptionPane.showMessageDialog(this, "아직 출근하지 않았습니다.");
+            return;
+        }
+
+        // 이미 퇴근
+        if (today.getCheck_out() != null) {
+            JOptionPane.showMessageDialog(this, "이미 퇴근 처리되었습니다.");
+            return;
+        }
+
+        boolean result =
+                employeeService.checkOut(loginUser);
 
         if (result) {
             JOptionPane.showMessageDialog(this, "퇴근 처리되었습니다.");
             updateTodayStatus();
             loadInitialView();
         } else {
-            JOptionPane.showMessageDialog(this, "퇴근할 수 없습니다. (출근 후 10분 미경과 또는 미출근)");
+            JOptionPane.showMessageDialog(this, "출근 후 10분이 지나야 퇴근할 수 있습니다.");
         }
     }
+
 
     // 초기 화면
     private void loadInitialView() {

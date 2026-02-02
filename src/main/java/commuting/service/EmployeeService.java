@@ -65,17 +65,35 @@ public class EmployeeService {
     }
 
     // 오늘 근무 상태 조회
-    public Attendance getTodayAttendance(User user) {
-        List<Attendance> list = attendanceDAO.selectMyAttendance(user.getUser_id());
-        LocalDate today = LocalDate.now();
+//    public Attendance getTodayAttendance(User user) {
+//        List<Attendance> list = attendanceDAO.selectMyAttendance(user.getUser_id());
+//        LocalDate today = LocalDate.now();
+//
+//        for (Attendance a : list) {
+//            if (a.getWork_date().equals(today)) {
+//                return a;
+//            }
+//        }
+//        return null; // 오늘 출근 기록 없음
+//    }
 
-        for (Attendance a : list) {
-            if (a.getWork_date().equals(today)) {
-                return a;
-            }
+
+    public Attendance getTodayAttendance(User user) {
+
+        List<Attendance> list =
+                attendanceDAO.selectMyAttendance(user.getUser_id());
+
+        if (list.isEmpty()) return null;
+
+        Attendance latest = list.get(0);
+
+        if (!latest.getWork_date().equals(LocalDate.now())) {
+            return null;
         }
-        return null; // 오늘 출근 기록 없음
+
+        return latest;
     }
+
 
     // 오늘 근무 시간 계산 (분 단위)
     public long getTodayWorkMinutes(User user) {
@@ -91,6 +109,9 @@ public class EmployeeService {
 
         return Duration.between(today.getCheck_in(), end).toMinutes();
     }
+
+
+  // 이미퇴근
 
 
     // 출퇴근 기록 조회

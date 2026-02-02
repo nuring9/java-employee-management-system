@@ -188,9 +188,12 @@ public class AdminAttendanceUI extends JFrame {
             }
 
             // 월 출근율 계산 (날짜 기준: 오늘 달)
-            YearMonth ym = YearMonth.now();
+            YearMonth ym = YearMonth.from(a.getWork_date());
             double rate =
                     service.getMonthlyAttendanceRateExcludeWeekend(a.getUser_id(), ym);
+
+
+
 
             String rateText = rate == 0 ? "-" : rate + "%";
 
