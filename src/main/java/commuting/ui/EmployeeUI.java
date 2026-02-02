@@ -31,6 +31,7 @@ public class EmployeeUI extends JFrame {
 
         initUI();
         updateTodayStatus(); // 초기 상태 갱신
+        loadInitialView(); // 초기화면
         setVisible(true);
     }
 
@@ -124,6 +125,45 @@ public class EmployeeUI extends JFrame {
             JOptionPane.showMessageDialog(this, "퇴근할 수 없습니다. (출근 후 10분 미경과 또는 미출근)");
         }
     }
+
+    // 초기 화면
+    private void loadInitialView() {
+        textArea.setText("");
+
+        Attendance today = employeeService.getTodayAttendance(loginUser);
+
+        textArea.append("▶ 오늘 근무 요약\n");
+
+        if (today == null) {
+            textArea.append(" - 아직 출근하지 않았습니다.\n\n");
+        } else {
+            String inTime = today.getCheck_in() == null ? "-" : today.getCheck_in().format(TIME_FMT);
+            String outTime = today.getCheck_out() == null ? "-" : today.getCheck_out().format(TIME_FMT);
+
+            textArea.append(" - 출근: " + inTime + "\n");
+            textArea.append(" - 퇴근: " + outTime + "\n\n");
+        }
+
+        textArea.append("▶ 최근 출근 기록\n");
+
+        List<Attendance> list = employeeService.getMyAttendance(loginUser);
+
+        int count = 0;
+        for (Attendance a : list) {
+            if (count == 5) break;
+
+            textArea.append(
+                    a.getWork_date()
+                            + " | 출근: " +
+                            (a.getCheck_in() == null ? "-" : a.getCheck_in().format(TIME_FMT))
+                            + " | 퇴근: " +
+                            (a.getCheck_out() == null ? "-" : a.getCheck_out().format(TIME_FMT))
+                            + "\n"
+            );
+            count++;
+        }
+    }
+
 
     // 로그아웃
     private void logout() {
