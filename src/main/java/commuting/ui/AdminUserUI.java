@@ -55,8 +55,10 @@ public class AdminUserUI extends JFrame {
         JButton btnAdd = new JButton("추가");
         JButton btnUpdate = new JButton("수정");
         JButton btnDelete = new JButton("삭제");
-        JButton btnAttendance = new JButton("출퇴근 관리");
         JButton btnRefresh = new JButton("새로고침");
+        JButton btnAttendance = new JButton("출퇴근 관리");
+        JButton btnLogout = new JButton("로그아웃");
+
 
         Dimension btnSize = new Dimension(90, 32);
         btnAdd.setPreferredSize(btnSize);
@@ -64,6 +66,8 @@ public class AdminUserUI extends JFrame {
         btnDelete.setPreferredSize(btnSize);
         btnAttendance.setPreferredSize(btnSize);
         btnRefresh.setPreferredSize(btnSize);
+        btnAttendance.setPreferredSize(new Dimension(110, 32));
+        btnLogout.setPreferredSize(btnSize);
 
 
         btnPanel.add(btnAdd);
@@ -71,7 +75,7 @@ public class AdminUserUI extends JFrame {
         btnPanel.add(btnDelete);
         btnPanel.add(btnAttendance);
         btnPanel.add(btnRefresh);
-
+        btnPanel.add(btnLogout);
         add(btnPanel, BorderLayout.SOUTH);
 
 
@@ -83,6 +87,7 @@ public class AdminUserUI extends JFrame {
             new AdminAttendanceUI(loginUser); // loginUser = 관리자
         });
         btnUpdate.addActionListener(e -> openUpdateUserDialog());
+        btnLogout.addActionListener(e -> logout());
     }
 
     public void loadUsers() {
@@ -183,7 +188,19 @@ public class AdminUserUI extends JFrame {
         }
     }
 
+    private void logout() {
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                "로그아웃 하시겠습니까?",
+                "로그아웃",
+                JOptionPane.YES_NO_OPTION
+        );
 
+        if (result == JOptionPane.YES_OPTION) {
+            dispose();      // 관리자 화면 종료
+            new LoginUI();  // 로그인 화면으로
+        }
+    }
 
     public void deleteSelectedUser() {
         int row = table.getSelectedRow();

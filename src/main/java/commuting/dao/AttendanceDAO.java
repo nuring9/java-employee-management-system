@@ -6,11 +6,15 @@ import commuting.dto.Attendance;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+
+import static commuting.common.DBUtil.getConnection;
 
 public class AttendanceDAO {
 
@@ -132,6 +136,66 @@ public class AttendanceDAO {
         return list;
     }
 
+
+    // 출근 평일만 계산
+    public int countMonthlyAttendanceExcludeWeekend(String userId, YearMonth month) {
+
+        LocalDate start = month.atDay(1);
+        LocalDate end = month.atEndOfMonth();
+
+        String sql =
+                "SELECT COUNT(*) " +
+                        "FROM attendance " +
+                        "WHERE user_id = ? " +
+                        "AND check_in IS NOT NULL " +
+                        "AND work_date BETWEEN ? AND ? " +
+                        "AND DAYOFWEEK(work_date) NOT IN (1, 7)"; // 일(1), 토(7)
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, userId);
+            ps.setDate(2, java.sql.Date.valueOf(start));
+            ps.setDate(3, java.sql.Date.valueOf(end));
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    // 월 출근일수
+    public int countMonthlyAttendance(String userId, YearMonth month) {
+
+        LocalDate start = month.atDay(1);
+        LocalDate end = month.atEndOfMonth();
+
+        String sql =
+                "SELECT COUNT(*) " +
+                        "FROM attendance " +
+                        "WHERE user_id = ? " +
+                        "AND check_in IS NOT NULL " +
+                        "AND work_date BETWEEN ? AND ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, userId);
+            ps.setDate(2, java.sql.Date.valueOf(start));
+            ps.setDate(3, java.sql.Date.valueOf(end));
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
     // 날짜별 전체 출퇴근 조회
     public List<Attendance> findAllByDate(LocalDate date) {
         List<Attendance> list = new ArrayList<>();
@@ -171,6 +235,26 @@ public class AttendanceDAO {
             e.printStackTrace();
         }
         return list;
+    }
+
+    // 전체 직원 수
+    public int getTotalEmployeeCount() {
+        String sql = "SELECT COUNT(*) FROM user WHERE role = 'EMPLOYEE'";
+        int count = 0;
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                count = rs.getInt(1);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return count;
     }
 
     // 오늘 출근자 수
@@ -232,26 +316,149 @@ public class AttendanceDAO {
         return 0;
     }
 
-
-
-    // 관리자 강제 퇴근 처리
-    public boolean updateCheckOut(String user_id, LocalDate date) {
+    // 날짜별 출근자 수
+    public int countCheckInByDate(LocalDate date) {
         String sql =
-                "UPDATE attendance " +
-                        "SET check_out = CURTIME() " +
-                        "WHERE user_id = ? AND work_date = ? AND check_out IS NULL";
+                "SELECT COUNT(*) FROM attendance " +
+                        "WHERE work_date = ? AND check_in IS NOT NULL";
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, user_id);
-            pstmt.setDate(2, java.sql.Date.valueOf(date));
-
-            return pstmt.executeUpdate() > 0;
+            pstmt.setDate(1, java.sql.Date.valueOf(date));
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) return rs.getInt(1);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return false;
+        return 0;
     }
+
+    // 날짜별 퇴근자 수
+    public int countCheckOutByDate(LocalDate date) {
+        String sql =
+                "SELECT COUNT(*) FROM attendance " +
+                        "WHERE work_date = ? AND check_out IS NOT NULL";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setDate(1, java.sql.Date.valueOf(date));
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) return rs.getInt(1);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
+
+    // 출석을했던안했던 모든직원
+    public List<Attendance> findAllWithAbsentByDate(LocalDate date) {
+        List<Attendance> list = new ArrayList<>();
+
+        String sql =
+                "SELECT u.user_id, u.name, u.department, ? AS work_date, " +
+                        "       a.check_in, a.check_out " +
+                        "FROM user u " +
+                        "LEFT JOIN attendance a " +
+                        "  ON u.user_id = a.user_id AND a.work_date = ? " +
+                        "WHERE u.role = 'EMPLOYEE' " +
+                        "ORDER BY u.department, u.name";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setDate(1, java.sql.Date.valueOf(date));
+            ps.setDate(2, java.sql.Date.valueOf(date));
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Attendance a = new Attendance();
+                a.setUser_id(rs.getString("user_id"));
+                a.setName(rs.getString("name"));
+                a.setDepartment(rs.getString("department"));
+                a.setWork_date(date);
+
+                if (rs.getTime("check_in") != null) {
+                    a.setCheck_in(
+                            LocalDateTime.of(date, rs.getTime("check_in").toLocalTime())
+                    );
+                }
+
+                if (rs.getTime("check_out") != null) {
+                    a.setCheck_out(
+                            LocalDateTime.of(date, rs.getTime("check_out").toLocalTime())
+                    );
+                }
+
+                list.add(a);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+// 부서별 출근
+    public List<Object[]> getDepartmentAttendanceRate(LocalDate date) {
+        List<Object[]> list = new ArrayList<>();
+
+        String sql =
+                "SELECT u.department, " +
+                        "COUNT(u.user_id) AS total, " +
+                        "SUM(CASE WHEN a.check_in IS NOT NULL THEN 1 ELSE 0 END) AS checked " +
+                        "FROM user u " +
+                        "LEFT JOIN attendance a " +
+                        "ON u.user_id = a.user_id AND a.work_date = ? " +
+                        "WHERE u.role = 'EMPLOYEE' " +
+                        "GROUP BY u.department";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setDate(1, java.sql.Date.valueOf(date));
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String dept = rs.getString("department");
+                int total = rs.getInt("total");
+                int checked = rs.getInt("checked");
+
+                list.add(new Object[]{dept, checked, total});
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+//        // 관리자 강제 퇴근 처리
+//    public boolean updateCheckOut(String user_id, LocalDate date) {
+//        String sql =
+//                "UPDATE attendance " +
+//                        "SET check_out = CURTIME() " +
+//                        "WHERE user_id = ? AND work_date = ? AND check_out IS NULL";
+//
+//        try (Connection conn = DBUtil.getConnection();
+//             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+//
+//            pstmt.setString(1, user_id);
+//            pstmt.setDate(2, java.sql.Date.valueOf(date));
+//
+//            return pstmt.executeUpdate() > 0;
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return false;
+//    }
 }

@@ -50,7 +50,8 @@ public class EmployeeUI extends JFrame {
 
        // 중앙 텍스트 영역
         textArea = new JTextArea();
-        textArea.setEnabled(false);
+        textArea.setEditable(false);   // 수정 불가
+        textArea.setEnabled(true);     // 활성 상태 유지
         textArea.setFont(new Font("맑은 고딕", Font.PLAIN, 13));
         textArea.setMargin(new Insets(10, 10, 10, 10));
 
@@ -63,23 +64,25 @@ public class EmployeeUI extends JFrame {
         JButton btnCheckOut = new JButton("퇴근");
         JButton btnMyLog = new JButton("전체 출근 조회");
         JButton btnDateLog = new JButton("날짜별 조회");
+        JButton btnLogout = new JButton("로그아웃");
 
-        btnCheckIn.setPreferredSize(new Dimension(100, 32));
-        btnCheckOut.setPreferredSize(new Dimension(100, 32));
+        btnCheckIn.setPreferredSize(new Dimension(80, 32));
+        btnCheckOut.setPreferredSize(new Dimension(80, 32));
         btnMyLog.setPreferredSize(new Dimension(120, 32));
-        btnDateLog.setPreferredSize(new Dimension(150, 32));
-
+        btnDateLog.setPreferredSize(new Dimension(100, 32));
+        btnLogout.setPreferredSize(new Dimension(100, 32));
 
         btnPanel.add(btnCheckIn);
         btnPanel.add(btnCheckOut);
         btnPanel.add(btnMyLog);
         btnPanel.add(btnDateLog);
+        btnPanel.add(btnLogout);
 
         btnCheckIn.addActionListener(e -> checkIn());
         btnCheckOut.addActionListener(e -> checkOut());
         btnMyLog.addActionListener(e -> loadMyAttendance());          // 전체 이력
         btnDateLog.addActionListener(e -> loadMyAttendanceByDate()); // 날짜별
-
+        btnLogout.addActionListener(e -> logout()); // 로그아웃
 
         // 하단 상태 패널
         lblStatus = new JLabel("오늘 상태: 미출근");
@@ -119,6 +122,21 @@ public class EmployeeUI extends JFrame {
             updateTodayStatus();
         } else {
             JOptionPane.showMessageDialog(this, "퇴근할 수 없습니다. (출근 후 10분 미경과 또는 미출근)");
+        }
+    }
+
+    // 로그아웃
+    private void logout() {
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                "로그아웃 하시겠습니까?",
+                "로그아웃",
+                JOptionPane.YES_NO_OPTION
+        );
+
+        if (result == JOptionPane.YES_OPTION) {
+            dispose();          // 직원 화면 닫기
+            new LoginUI();      // 로그인 화면으로 이동
         }
     }
 
