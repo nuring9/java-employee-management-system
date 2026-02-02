@@ -12,9 +12,11 @@ import java.util.List;
 public class EmployeeUI extends JFrame {
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+
     private User loginUser;
     private EmployeeService employeeService = new EmployeeService();
     private JTextArea textArea;
+
 
     // 하단
     private JLabel lblStatus;
@@ -110,6 +112,7 @@ public class EmployeeUI extends JFrame {
         if (result) {
             JOptionPane.showMessageDialog(this, "출근 처리되었습니다.");
             updateTodayStatus();
+            loadInitialView();
         } else {
             JOptionPane.showMessageDialog(this, "이미 오늘 출근 처리되었습니다.");
         }
@@ -121,6 +124,7 @@ public class EmployeeUI extends JFrame {
         if (result) {
             JOptionPane.showMessageDialog(this, "퇴근 처리되었습니다.");
             updateTodayStatus();
+            loadInitialView();
         } else {
             JOptionPane.showMessageDialog(this, "퇴근할 수 없습니다. (출근 후 10분 미경과 또는 미출근)");
         }
@@ -131,6 +135,7 @@ public class EmployeeUI extends JFrame {
         textArea.setText("");
 
         Attendance today = employeeService.getTodayAttendance(loginUser);
+
 
         textArea.append("▶ 오늘 근무 요약\n");
 
